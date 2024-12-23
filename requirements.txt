@@ -1,0 +1,7 @@
+streamlit
+streamlit-chat
+python-socketio
+eventlet
+pymongo
+openai
+python-dotenv
