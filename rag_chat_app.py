@@ -4,47 +4,28 @@ import socketio
 from database import Database
 from rag_model import RAGModel
 import time
-import eventlet
-from multiprocessing import Process
 
 # Initialize database and RAG model
 db = Database()
 rag = RAGModel()
 
-# SocketIO server setup
-sio_server = socketio.Server(cors_allowed_origins='*')
-app = socketio.WSGIApp(sio_server)
-
-@sio_server.event
-def connect(sid, environ):
-    print(f"Client connected: {sid}")
-
-@sio_server.event
-def disconnect(sid):
-    print(f"Client disconnected: {sid}")
-
-@sio_server.event
-def message(sid, data):
-    print(f"Message from {sid}: {data}")
-    sio_server.emit('message', data, skip_sid=sid)
-
 # SocketIO client setup
-sio_client = socketio.Client()
+sio = socketio.Client()
 
-@sio_client.event
+@sio.event
 def connect():
     print("Connected to SocketIO server")
 
-@sio_client.event
+@sio.event
 def disconnect():
     print("Disconnected from SocketIO server")
 
-@sio_client.on('message')
+@sio.on('message')
 def on_message(data):
     st.experimental_rerun()
 
 # Streamlit app
-def streamlit_app():
+def main():
     st.title("RAG Chat System")
 
     # User authentication (simplified)
@@ -52,8 +33,11 @@ def streamlit_app():
 
     if user:
         # Connect to SocketIO server
-        if not sio_client.connected:
-            sio_client.connect('http://localhost:5000')
+        if not sio.connected:
+            try:
+                sio.connect('http://localhost:5000')
+            except Exception as e:
+                st.error(f"Failed to connect to SocketIO server: {e}")
 
         # Chat interface
         st.subheader("Chat")
@@ -70,7 +54,7 @@ def streamlit_app():
             db.save_message(user, new_message, time.time())
             
             # Send message via SocketIO
-            sio_client.emit('message', {'user': user, 'message': new_message})
+            sio.emit('message', {'user': user, 'message': new_message})
             
             # Get AI response
             ai_response = rag.query(new_message)
@@ -87,17 +71,5 @@ def streamlit_app():
             db.save_file(uploaded_file.name, file_contents, user)
             st.success(f"File {uploaded_file.name} uploaded successfully!")
 
-def run_socketio_server():
-    eventlet.wsgi.server(eventlet.listen(('', 5000)), app)
-
 if __name__ == "__main__":
-    # Start SocketIO server in a separate process
-    server_process = Process(target=run_socketio_server)
-    server_process.start()
-
-    # Run Streamlit app
-    import streamlit.web.bootstrap as bootstrap
-    bootstrap.run(streamlit_app, '', [], flag_options={})
-
-    # Wait for the server process to finish
-    server_process.join()
+    main()
