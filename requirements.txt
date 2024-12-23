@@ -3,5 +3,5 @@ streamlit-chat
 python-socketio
 eventlet
 pymongo
-openai
+openai>=1.0.0
 python-dotenv

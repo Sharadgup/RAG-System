@@ -1,13 +1,12 @@
-import openai
+from openai import OpenAI
 from dotenv import load_dotenv
 import os
 
 load_dotenv()
 
-openai.api_key = os.getenv("OPENAI_API_KEY")
-
 class RAGModel:
     def __init__(self):
+        self.client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
         # Initialize your document store here
         self.document_store = []
 
@@ -24,9 +23,12 @@ class RAGModel:
 
     def generate_response(self, query, context):
         prompt = f"Context: {context}\n\nQuery: {query}\n\nResponse:"
-        response = openai.Completion.create(
-            engine="text-davinci-002",
-            prompt=prompt,
+        response = self.client.chat.completions.create(
+            model="gpt-3.5-turbo",
+            messages=[
+                {"role": "system", "content": "You are a helpful assistant."},
+                {"role": "user", "content": prompt}
+            ],
             max_tokens=150
         )
-        return response.choices[0].text.strip()
+        return response.choices[0].message.content.strip()
